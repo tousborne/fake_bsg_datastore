@@ -8,7 +8,7 @@ import "io/ioutil"
 import "fmt"
 import "net/http"
 
-const MAXBYTES = 200
+const MAXBYTES = 1000
 
 func display(writer http.ResponseWriter, request *http.Request) {
 	fmt.Printf("######\n")
@@ -36,8 +36,6 @@ func display(writer http.ResponseWriter, request *http.Request) {
 
 	err = request.ParseMultipartForm(50)
 	if err == nil {
-		fmt.Printf("# multipart:%+v\n", request.MultipartForm)
-
 		if len(request.MultipartForm.File) != 0 {
 			fmt.Printf("# multipart files:\n")
 		}
@@ -89,19 +87,23 @@ func display(writer http.ResponseWriter, request *http.Request) {
 		}
 
 		for key, value := range request.MultipartForm.Value {
+			var jsonValue []map[string]string
+
+			for _, element := range value {
+				var jsonData map[string]string
+
+				err := json.Unmarshal([]byte(element), &jsonData)
+				if err != nil {
+					fmt.Printf("# Error decoding json: %s\n", err)
+					continue
+				}
+
+				jsonValue = append(jsonValue, jsonData)
+			}
+
 			if key == "item" {
-				var new_data []string
-
-				for _, element := range value {
-					var jsonData map[string]string
-
-					err = json.Unmarshal([]byte(element), &jsonData)
-					if err != nil {
-						fmt.Printf("# Error decoding json: %s\n", err)
-						continue
-					}
-
-					encoded, exists := jsonData["data"]
+				for _, element := range jsonValue {
+					encoded, exists := element["data"]
 
 					if exists {
 						decoded, err := base64.StdEncoding.DecodeString(encoded)
@@ -117,20 +119,17 @@ func display(writer http.ResponseWriter, request *http.Request) {
 							decoded = decoded[0:MAXBYTES]
 						}
 
-						jsonData["data"] = string(decoded)
-						temp, err := json.Marshal(jsonData)
-						if err != nil {
-							fmt.Printf("# Error marshaling json: %s\n", err)
-							continue
-						}
-
-						new_data = append(new_data, string(temp))
+						element["data"] = string(decoded)
 					}
 				}
-
-				value = new_data
 			}
-			fmt.Printf("\t%s: %s\n", key, value)
+
+			fmt.Printf("#\t%s:\n", key)
+			for _, element := range jsonValue {
+				for jkey, jvalue := range element {
+					fmt.Printf("#\t\t%s: %s\n", jkey, jvalue)
+				}
+			}
 		}
 
 	} else {
