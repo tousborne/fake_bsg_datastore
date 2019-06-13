@@ -57,35 +57,6 @@ func display(writer http.ResponseWriter, request *http.Request) {
 					fmt.Printf("# Error reading file: %s\n", err)
 				}
 
-				if file == "item" {
-					var jsonData map[string]string
-					err = json.Unmarshal(data, &jsonData)
-					encoded, exists := jsonData["data"]
-					if exists {
-						decoded, err := base64.StdEncoding.DecodeString(encoded)
-						if err != nil {
-							fmt.Printf("# Error decoding base64 data: %s\n", err)
-							continue
-						}
-
-						fmt.Printf("# Decoded base64 data\n")
-
-						if len(decoded) > MAXBYTES {
-							fmt.Printf("# Note: cut output to %d bytes\n", MAXBYTES)
-							decoded = decoded[0:MAXBYTES]
-						}
-
-						jsonData["data"] = string(decoded)
-						temp, err := json.Marshal(jsonData)
-						if err != nil {
-							fmt.Printf("# Error marshaling json: %s", err)
-							continue
-						}
-
-						data = temp
-					}
-				}
-
 				if file == "dataFile" {
 					reader, err := gzip.NewReader(bytes.NewReader(data))
 					if err != nil {
@@ -118,7 +89,48 @@ func display(writer http.ResponseWriter, request *http.Request) {
 		}
 
 		for key, value := range request.MultipartForm.Value {
-			fmt.Printf("\t%s: %s", key, value)
+			if key == "item" {
+				var new_data []string
+
+				for _, element := range value {
+					var jsonData map[string]string
+
+					err = json.Unmarshal([]byte(element), &jsonData)
+					if err != nil {
+						fmt.Printf("# Error decoding json: %s\n", err)
+						continue
+					}
+
+					encoded, exists := jsonData["data"]
+
+					if exists {
+						decoded, err := base64.StdEncoding.DecodeString(encoded)
+						if err != nil {
+							fmt.Printf("# Error decoding base64 data: %s\n", err)
+							continue
+						}
+
+						fmt.Printf("# Decoded base64 data\n")
+
+						if len(decoded) > MAXBYTES {
+							fmt.Printf("# Note: cut output to %d bytes\n", MAXBYTES)
+							decoded = decoded[0:MAXBYTES]
+						}
+
+						jsonData["data"] = string(decoded)
+						temp, err := json.Marshal(jsonData)
+						if err != nil {
+							fmt.Printf("# Error marshaling json: %s\n", err)
+							continue
+						}
+
+						new_data = append(new_data, string(temp))
+					}
+				}
+
+				value = new_data
+			}
+			fmt.Printf("\t%s: %s\n", key, value)
 		}
 
 	} else {
