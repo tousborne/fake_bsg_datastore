@@ -83,7 +83,7 @@ func display(writer http.ResponseWriter, request *http.Request) {
 		}
 
 		if len(request.MultipartForm.Value) != 0 {
-			fmt.Printf("# multpart vaues:\n")
+			fmt.Printf("# multipart values:\n")
 		}
 
 		for key, value := range request.MultipartForm.Value {
