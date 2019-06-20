@@ -4,11 +4,14 @@ import "bytes"
 import "compress/gzip"
 import "encoding/base64"
 import "encoding/json"
+import "flag"
 import "io/ioutil"
 import "fmt"
 import "net/http"
 
 const MAXBYTES = 1000
+
+var RAW bool
 
 func display(writer http.ResponseWriter, request *http.Request) {
 	fmt.Printf("######\n")
@@ -55,7 +58,7 @@ func display(writer http.ResponseWriter, request *http.Request) {
 					fmt.Printf("# Error reading file: %s\n", err)
 				}
 
-				if file == "dataFile" {
+				if !RAW && file == "dataFile" {
 					reader, err := gzip.NewReader(bytes.NewReader(data))
 					if err != nil {
 						fmt.Printf("# Error opening gzipped data: %s\n", err)
@@ -101,7 +104,7 @@ func display(writer http.ResponseWriter, request *http.Request) {
 				jsonValue = append(jsonValue, jsonData)
 			}
 
-			if key == "item" {
+			if !RAW && key == "item" {
 				for _, element := range jsonValue {
 					encoded, exists := element["data"]
 
@@ -152,6 +155,9 @@ func display(writer http.ResponseWriter, request *http.Request) {
 }
 
 func main() {
+	flag.BoolVar(&RAW, "raw", false, "whether or not to interpret data")
+	flag.Parse()
+
 	http.HandleFunc("/datastore", display)
 
 	err := http.ListenAndServe(":8000", nil)
