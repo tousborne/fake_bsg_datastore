@@ -62,7 +62,9 @@ def main(tries: int):
                     logging.info('# FAIL')
 
         logging.info('##########')
-        time.sleep(WAIT_TIME)
+
+        if attempt < tries:
+            time.sleep(WAIT_TIME)
 
 
 def create_data_file(path: str) -> bool:
